@@ -1,0 +1,1305 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyNVXRRN0iEMQo6hz5NaTJ/k",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Kaleab1999/Ethiopia-airlines-tweeter-review-sentiment-analysis/blob/main/TF-IDF\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "cSyCsJnmJgUs"
+      },
+      "outputs": [],
+      "source": [
+        "import pandas as pd\n",
+        "\n",
+        "import numpy as np\n",
+        "import re\n",
+        "import string\n",
+        "import spacy\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from google.colab import drive\n",
+        "drive.mount('/content/drive')"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "wkz-ULhiJoCt",
+        "outputId": "229ad153-b464-4cda-9ec9-20e43affd676"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Mounted at /content/drive\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df= pd.read_csv('/content/drive/MyDrive/dataset/merge-csv.com__6361876ee50a8.csv', encoding='unicode_escape')\n",
+        "df.head()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 337
+        },
+        "id": "BnmOfKy9JzHF",
+        "outputId": "a4aed7ba-1dea-4cdc-eab7-67fe4f70bb64"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "                created_at       user_id              name     label  \\\n",
+              "0  2022-10-28 23:15:24 UTC  4.386524e+08       AfricanSon®  negative   \n",
+              "1  2022-10-28 22:53:28 UTC  1.320000e+18      Bargo YOUSIF  negative   \n",
+              "2  2022-10-28 22:21:31 UTC  8.226798e+08  Dr. Aklog Birara  positive   \n",
+              "3  2022-10-28 19:46:19 UTC  1.470000e+18              bill  negative   \n",
+              "4  2022-10-28 16:40:48 UTC  1.570000e+18          OverMeon   neutral   \n",
+              "\n",
+              "                                               tweet language  \\\n",
+              "0  Ethiopian Airlines (EA) flight ET-3717 was int...       en   \n",
+              "1  _ details: It's #Ethiopian_Airlines flight, sm...       en   \n",
+              "2  I look forward to seeing integrated infrastruc...       en   \n",
+              "3  @jaeyoonieee me getting on ethiopian airlines ...       en   \n",
+              "4  #ETH552 ET-AVE A350 941 Ethiopian Airlines ADD...       en   \n",
+              "\n",
+              "                                                link  Column1  \n",
+              "0  https://twitter.com/samsenge/status/1586134568...      NaN  \n",
+              "1  https://twitter.com/BargoYousif/status/1586129...      NaN  \n",
+              "2  https://twitter.com/DrAklogBirara/status/15861...      NaN  \n",
+              "3  https://twitter.com/ysfkd_/status/158608195096...      NaN  \n",
+              "4  https://twitter.com/OverMeon/status/1586035262...      NaN  "
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-a84b69a1-8bc2-465e-b066-7a08681275ec\">\n",
+              "    <div class=\"colab-df-container\">\n",
+              "      <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>created_at</th>\n",
+              "      <th>user_id</th>\n",
+              "      <th>name</th>\n",
+              "      <th>label</th>\n",
+              "      <th>tweet</th>\n",
+              "      <th>language</th>\n",
+              "      <th>link</th>\n",
+              "      <th>Column1</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>2022-10-28 23:15:24 UTC</td>\n",
+              "      <td>4.386524e+08</td>\n",
+              "      <td>AfricanSon®</td>\n",
+              "      <td>negative</td>\n",
+              "      <td>Ethiopian Airlines (EA) flight ET-3717 was int...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/samsenge/status/1586134568...</td>\n",
+              "      <td>NaN</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>2022-10-28 22:53:28 UTC</td>\n",
+              "      <td>1.320000e+18</td>\n",
+              "      <td>Bargo YOUSIF</td>\n",
+              "      <td>negative</td>\n",
+              "      <td>_ details: It's #Ethiopian_Airlines flight, sm...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/BargoYousif/status/1586129...</td>\n",
+              "      <td>NaN</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>2022-10-28 22:21:31 UTC</td>\n",
+              "      <td>8.226798e+08</td>\n",
+              "      <td>Dr. Aklog Birara</td>\n",
+              "      <td>positive</td>\n",
+              "      <td>I look forward to seeing integrated infrastruc...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/DrAklogBirara/status/15861...</td>\n",
+              "      <td>NaN</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>2022-10-28 19:46:19 UTC</td>\n",
+              "      <td>1.470000e+18</td>\n",
+              "      <td>bill</td>\n",
+              "      <td>negative</td>\n",
+              "      <td>@jaeyoonieee me getting on ethiopian airlines ...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/ysfkd_/status/158608195096...</td>\n",
+              "      <td>NaN</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>2022-10-28 16:40:48 UTC</td>\n",
+              "      <td>1.570000e+18</td>\n",
+              "      <td>OverMeon</td>\n",
+              "      <td>neutral</td>\n",
+              "      <td>#ETH552 ET-AVE A350 941 Ethiopian Airlines ADD...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/OverMeon/status/1586035262...</td>\n",
+              "      <td>NaN</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "      <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-a84b69a1-8bc2-465e-b066-7a08681275ec')\"\n",
+              "              title=\"Convert this dataframe to an interactive table.\"\n",
+              "              style=\"display:none;\">\n",
+              "        \n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M0 0h24v24H0V0z\" fill=\"none\"/>\n",
+              "    <path d=\"M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z\"/><path d=\"M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z\"/>\n",
+              "  </svg>\n",
+              "      </button>\n",
+              "      \n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      flex-wrap:wrap;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "      <script>\n",
+              "        const buttonEl =\n",
+              "          document.querySelector('#df-a84b69a1-8bc2-465e-b066-7a08681275ec button.colab-df-convert');\n",
+              "        buttonEl.style.display =\n",
+              "          google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "        async function convertToInteractive(key) {\n",
+              "          const element = document.querySelector('#df-a84b69a1-8bc2-465e-b066-7a08681275ec');\n",
+              "          const dataTable =\n",
+              "            await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                     [key], {});\n",
+              "          if (!dataTable) return;\n",
+              "\n",
+              "          const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "            '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "            + ' to learn more about interactive tables.';\n",
+              "          element.innerHTML = '';\n",
+              "          dataTable['output_type'] = 'display_data';\n",
+              "          await google.colab.output.renderOutput(dataTable, element);\n",
+              "          const docLink = document.createElement('div');\n",
+              "          docLink.innerHTML = docLinkHtml;\n",
+              "          element.appendChild(docLink);\n",
+              "        }\n",
+              "      </script>\n",
+              "    </div>\n",
+              "  </div>\n",
+              "  "
+            ]
+          },
+          "metadata": {},
+          "execution_count": 4
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df['length']= df['tweet'].apply(lambda x: len(x.split()))\n",
+        "\n",
+        "df.head()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 337
+        },
+        "id": "au2lW_g5M0pD",
+        "outputId": "c1434d46-9de8-452e-f48e-823d3efc96d1"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "                created_at       user_id              name     label  \\\n",
+              "0  2022-10-28 23:15:24 UTC  4.386524e+08       AfricanSon®  negative   \n",
+              "1  2022-10-28 22:53:28 UTC  1.320000e+18      Bargo YOUSIF  negative   \n",
+              "2  2022-10-28 22:21:31 UTC  8.226798e+08  Dr. Aklog Birara  positive   \n",
+              "3  2022-10-28 19:46:19 UTC  1.470000e+18              bill  negative   \n",
+              "4  2022-10-28 16:40:48 UTC  1.570000e+18          OverMeon   neutral   \n",
+              "\n",
+              "                                               tweet language  \\\n",
+              "0  Ethiopian Airlines (EA) flight ET-3717 was int...       en   \n",
+              "1  _ details: It's #Ethiopian_Airlines flight, sm...       en   \n",
+              "2  I look forward to seeing integrated infrastruc...       en   \n",
+              "3  @jaeyoonieee me getting on ethiopian airlines ...       en   \n",
+              "4  #ETH552 ET-AVE A350 941 Ethiopian Airlines ADD...       en   \n",
+              "\n",
+              "                                                link  Column1  length  \n",
+              "0  https://twitter.com/samsenge/status/1586134568...      NaN      31  \n",
+              "1  https://twitter.com/BargoYousif/status/1586129...      NaN      31  \n",
+              "2  https://twitter.com/DrAklogBirara/status/15861...      NaN      33  \n",
+              "3  https://twitter.com/ysfkd_/status/158608195096...      NaN      12  \n",
+              "4  https://twitter.com/OverMeon/status/1586035262...      NaN      36  "
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-553c4702-c237-4c0b-89bc-566ffc73e93d\">\n",
+              "    <div class=\"colab-df-container\">\n",
+              "      <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>created_at</th>\n",
+              "      <th>user_id</th>\n",
+              "      <th>name</th>\n",
+              "      <th>label</th>\n",
+              "      <th>tweet</th>\n",
+              "      <th>language</th>\n",
+              "      <th>link</th>\n",
+              "      <th>Column1</th>\n",
+              "      <th>length</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>2022-10-28 23:15:24 UTC</td>\n",
+              "      <td>4.386524e+08</td>\n",
+              "      <td>AfricanSon®</td>\n",
+              "      <td>negative</td>\n",
+              "      <td>Ethiopian Airlines (EA) flight ET-3717 was int...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/samsenge/status/1586134568...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>31</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>2022-10-28 22:53:28 UTC</td>\n",
+              "      <td>1.320000e+18</td>\n",
+              "      <td>Bargo YOUSIF</td>\n",
+              "      <td>negative</td>\n",
+              "      <td>_ details: It's #Ethiopian_Airlines flight, sm...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/BargoYousif/status/1586129...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>31</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>2022-10-28 22:21:31 UTC</td>\n",
+              "      <td>8.226798e+08</td>\n",
+              "      <td>Dr. Aklog Birara</td>\n",
+              "      <td>positive</td>\n",
+              "      <td>I look forward to seeing integrated infrastruc...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/DrAklogBirara/status/15861...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>33</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>2022-10-28 19:46:19 UTC</td>\n",
+              "      <td>1.470000e+18</td>\n",
+              "      <td>bill</td>\n",
+              "      <td>negative</td>\n",
+              "      <td>@jaeyoonieee me getting on ethiopian airlines ...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/ysfkd_/status/158608195096...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>12</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>2022-10-28 16:40:48 UTC</td>\n",
+              "      <td>1.570000e+18</td>\n",
+              "      <td>OverMeon</td>\n",
+              "      <td>neutral</td>\n",
+              "      <td>#ETH552 ET-AVE A350 941 Ethiopian Airlines ADD...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/OverMeon/status/1586035262...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>36</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "      <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-553c4702-c237-4c0b-89bc-566ffc73e93d')\"\n",
+              "              title=\"Convert this dataframe to an interactive table.\"\n",
+              "              style=\"display:none;\">\n",
+              "        \n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M0 0h24v24H0V0z\" fill=\"none\"/>\n",
+              "    <path d=\"M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z\"/><path d=\"M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z\"/>\n",
+              "  </svg>\n",
+              "      </button>\n",
+              "      \n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      flex-wrap:wrap;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "      <script>\n",
+              "        const buttonEl =\n",
+              "          document.querySelector('#df-553c4702-c237-4c0b-89bc-566ffc73e93d button.colab-df-convert');\n",
+              "        buttonEl.style.display =\n",
+              "          google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "        async function convertToInteractive(key) {\n",
+              "          const element = document.querySelector('#df-553c4702-c237-4c0b-89bc-566ffc73e93d');\n",
+              "          const dataTable =\n",
+              "            await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                     [key], {});\n",
+              "          if (!dataTable) return;\n",
+              "\n",
+              "          const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "            '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "            + ' to learn more about interactive tables.';\n",
+              "          element.innerHTML = '';\n",
+              "          dataTable['output_type'] = 'display_data';\n",
+              "          await google.colab.output.renderOutput(dataTable, element);\n",
+              "          const docLink = document.createElement('div');\n",
+              "          docLink.innerHTML = docLinkHtml;\n",
+              "          element.appendChild(docLink);\n",
+              "        }\n",
+              "      </script>\n",
+              "    </div>\n",
+              "  </div>\n",
+              "  "
+            ]
+          },
+          "metadata": {},
+          "execution_count": 5
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df['length'].max()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "1Y7xmhLBNmAB",
+        "outputId": "59e275b7-cc78-4f8b-dba5-0f5722964896"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "64"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 6
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!pip install text-hammer"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "sPcvbpJGNw8m",
+        "outputId": "b1b3fed5-006e-4a10-a775-0b896ef1a962"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/\n",
+            "Collecting text-hammer\n",
+            "  Downloading text_hammer-0.1.5-py3-none-any.whl (7.6 kB)\n",
+            "Requirement already satisfied: numpy in /usr/local/lib/python3.7/dist-packages (from text-hammer) (1.21.6)\n",
+            "Requirement already satisfied: TextBlob in /usr/local/lib/python3.7/dist-packages (from text-hammer) (0.15.3)\n",
+            "Collecting beautifulsoup4==4.9.1\n",
+            "  Downloading beautifulsoup4-4.9.1-py3-none-any.whl (115 kB)\n",
+            "\u001b[K     |████████████████████████████████| 115 kB 5.0 MB/s \n",
+            "\u001b[?25hRequirement already satisfied: pandas in /usr/local/lib/python3.7/dist-packages (from text-hammer) (1.3.5)\n",
+            "Requirement already satisfied: spacy in /usr/local/lib/python3.7/dist-packages (from text-hammer) (3.4.2)\n",
+            "Collecting soupsieve>1.2\n",
+            "  Downloading soupsieve-2.3.2.post1-py3-none-any.whl (37 kB)\n",
+            "Requirement already satisfied: pytz>=2017.3 in /usr/local/lib/python3.7/dist-packages (from pandas->text-hammer) (2022.5)\n",
+            "Requirement already satisfied: python-dateutil>=2.7.3 in /usr/local/lib/python3.7/dist-packages (from pandas->text-hammer) (2.8.2)\n",
+            "Requirement already satisfied: six>=1.5 in /usr/local/lib/python3.7/dist-packages (from python-dateutil>=2.7.3->pandas->text-hammer) (1.15.0)\n",
+            "Requirement already satisfied: pathy>=0.3.5 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (0.6.2)\n",
+            "Requirement already satisfied: catalogue<2.1.0,>=2.0.6 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (2.0.8)\n",
+            "Requirement already satisfied: jinja2 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (2.11.3)\n",
+            "Requirement already satisfied: langcodes<4.0.0,>=3.2.0 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (3.3.0)\n",
+            "Requirement already satisfied: thinc<8.2.0,>=8.1.0 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (8.1.5)\n",
+            "Requirement already satisfied: murmurhash<1.1.0,>=0.28.0 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (1.0.9)\n",
+            "Requirement already satisfied: typing-extensions<4.2.0,>=3.7.4 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (4.1.1)\n",
+            "Requirement already satisfied: typer<0.5.0,>=0.3.0 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (0.4.2)\n",
+            "Requirement already satisfied: preshed<3.1.0,>=3.0.2 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (3.0.8)\n",
+            "Requirement already satisfied: tqdm<5.0.0,>=4.38.0 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (4.64.1)\n",
+            "Requirement already satisfied: setuptools in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (57.4.0)\n",
+            "Requirement already satisfied: cymem<2.1.0,>=2.0.2 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (2.0.7)\n",
+            "Requirement already satisfied: spacy-legacy<3.1.0,>=3.0.10 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (3.0.10)\n",
+            "Requirement already satisfied: wasabi<1.1.0,>=0.9.1 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (0.10.1)\n",
+            "Requirement already satisfied: srsly<3.0.0,>=2.4.3 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (2.4.5)\n",
+            "Requirement already satisfied: pydantic!=1.8,!=1.8.1,<1.11.0,>=1.7.4 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (1.10.2)\n",
+            "Requirement already satisfied: spacy-loggers<2.0.0,>=1.0.0 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (1.0.3)\n",
+            "Requirement already satisfied: requests<3.0.0,>=2.13.0 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (2.23.0)\n",
+            "Requirement already satisfied: packaging>=20.0 in /usr/local/lib/python3.7/dist-packages (from spacy->text-hammer) (21.3)\n",
+            "Requirement already satisfied: zipp>=0.5 in /usr/local/lib/python3.7/dist-packages (from catalogue<2.1.0,>=2.0.6->spacy->text-hammer) (3.10.0)\n",
+            "Requirement already satisfied: pyparsing!=3.0.5,>=2.0.2 in /usr/local/lib/python3.7/dist-packages (from packaging>=20.0->spacy->text-hammer) (3.0.9)\n",
+            "Requirement already satisfied: smart-open<6.0.0,>=5.2.1 in /usr/local/lib/python3.7/dist-packages (from pathy>=0.3.5->spacy->text-hammer) (5.2.1)\n",
+            "Requirement already satisfied: idna<3,>=2.5 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0,>=2.13.0->spacy->text-hammer) (2.10)\n",
+            "Requirement already satisfied: chardet<4,>=3.0.2 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0,>=2.13.0->spacy->text-hammer) (3.0.4)\n",
+            "Requirement already satisfied: urllib3!=1.25.0,!=1.25.1,<1.26,>=1.21.1 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0,>=2.13.0->spacy->text-hammer) (1.24.3)\n",
+            "Requirement already satisfied: certifi>=2017.4.17 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0,>=2.13.0->spacy->text-hammer) (2022.9.24)\n",
+            "Requirement already satisfied: confection<1.0.0,>=0.0.1 in /usr/local/lib/python3.7/dist-packages (from thinc<8.2.0,>=8.1.0->spacy->text-hammer) (0.0.3)\n",
+            "Requirement already satisfied: blis<0.8.0,>=0.7.8 in /usr/local/lib/python3.7/dist-packages (from thinc<8.2.0,>=8.1.0->spacy->text-hammer) (0.7.9)\n",
+            "Requirement already satisfied: click<9.0.0,>=7.1.1 in /usr/local/lib/python3.7/dist-packages (from typer<0.5.0,>=0.3.0->spacy->text-hammer) (7.1.2)\n",
+            "Requirement already satisfied: MarkupSafe>=0.23 in /usr/local/lib/python3.7/dist-packages (from jinja2->spacy->text-hammer) (2.0.1)\n",
+            "Requirement already satisfied: nltk>=3.1 in /usr/local/lib/python3.7/dist-packages (from TextBlob->text-hammer) (3.7)\n",
+            "Requirement already satisfied: regex>=2021.8.3 in /usr/local/lib/python3.7/dist-packages (from nltk>=3.1->TextBlob->text-hammer) (2022.6.2)\n",
+            "Requirement already satisfied: joblib in /usr/local/lib/python3.7/dist-packages (from nltk>=3.1->TextBlob->text-hammer) (1.2.0)\n",
+            "Installing collected packages: soupsieve, beautifulsoup4, text-hammer\n",
+            "  Attempting uninstall: beautifulsoup4\n",
+            "    Found existing installation: beautifulsoup4 4.6.3\n",
+            "    Uninstalling beautifulsoup4-4.6.3:\n",
+            "      Successfully uninstalled beautifulsoup4-4.6.3\n",
+            "Successfully installed beautifulsoup4-4.9.1 soupsieve-2.3.2.post1 text-hammer-0.1.5\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import text_hammer as th"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "Re-f8EKYN2oF",
+        "outputId": "d8a7eab2-2b74-4696-95a9-a8ae4ff18236"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.7/dist-packages/spacy/language.py:1899: UserWarning: [W123] Argument disable with value [] is used instead of ['senter'] as specified in the config. Be aware that this might affect other components in your pipeline.\n",
+            "  config_value=config[\"nlp\"][key],\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "nlp= spacy.load('en_core_web_sm')"
+      ],
+      "metadata": {
+        "id": "8z5kXqfhN8GE"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def preprocessor(x):\n",
+        "  doc= nlp(x)\n",
+        "\n",
+        "  text= [word.lemma_.lower().strip() for word in doc ]\n",
+        "  text = str(x).lower().replace('\\\\', '').replace('_', ' ')\n",
+        "  text = th.cont_exp(text)\n",
+        "  text = th.remove_emails(text)\n",
+        "  text = th.remove_urls(text)\n",
+        "  text = th.remove_html_tags(text)\n",
+        "  text = th.remove_rt(text)\n",
+        "  text = th.remove_accented_chars(text)\n",
+        "  text = th.remove_special_chars(text)\n",
+        "  text = re.sub(\"(.)\\\\1{2,}\", \"\\\\1\", text)\n",
+        "\n",
+        "  return text"
+      ],
+      "metadata": {
+        "id": "5eovRPh9NpkM"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df['tokenized']=  df['tweet'].apply(preprocessor)"
+      ],
+      "metadata": {
+        "id": "zC3Q3m5_OaH1"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df['encode']= df['label'].astype('category').cat.codes"
+      ],
+      "metadata": {
+        "id": "D37ySBRCOjfk"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df.head()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 530
+        },
+        "id": "83xHkhTwOpio",
+        "outputId": "31f56e1b-15bf-4329-a94f-a505505f485b"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "                created_at       user_id              name     label  \\\n",
+              "0  2022-10-28 23:15:24 UTC  4.386524e+08       AfricanSon®  negative   \n",
+              "1  2022-10-28 22:53:28 UTC  1.320000e+18      Bargo YOUSIF  negative   \n",
+              "2  2022-10-28 22:21:31 UTC  8.226798e+08  Dr. Aklog Birara  positive   \n",
+              "3  2022-10-28 19:46:19 UTC  1.470000e+18              bill  negative   \n",
+              "4  2022-10-28 16:40:48 UTC  1.570000e+18          OverMeon   neutral   \n",
+              "\n",
+              "                                               tweet language  \\\n",
+              "0  Ethiopian Airlines (EA) flight ET-3717 was int...       en   \n",
+              "1  _ details: It's #Ethiopian_Airlines flight, sm...       en   \n",
+              "2  I look forward to seeing integrated infrastruc...       en   \n",
+              "3  @jaeyoonieee me getting on ethiopian airlines ...       en   \n",
+              "4  #ETH552 ET-AVE A350 941 Ethiopian Airlines ADD...       en   \n",
+              "\n",
+              "                                                link  Column1  length  \\\n",
+              "0  https://twitter.com/samsenge/status/1586134568...      NaN      31   \n",
+              "1  https://twitter.com/BargoYousif/status/1586129...      NaN      31   \n",
+              "2  https://twitter.com/DrAklogBirara/status/15861...      NaN      33   \n",
+              "3  https://twitter.com/ysfkd_/status/158608195096...      NaN      12   \n",
+              "4  https://twitter.com/OverMeon/status/1586035262...      NaN      36   \n",
+              "\n",
+              "                                           tokenized  encode  \n",
+              "0  ethiopian airlines ea flight et3717 was interc...       0  \n",
+              "1  details it is ethiopian airlines flight smoke ...       0  \n",
+              "2  i look forward to seeing integrated infrastruc...       2  \n",
+              "3  jaeyoonie me getting on ethiopian airlines and...       0  \n",
+              "4  eth552 etavenuea350 941 ethiopian airlines adu...       1  "
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-4c2be413-514c-4fe5-8a9c-2646497926f8\">\n",
+              "    <div class=\"colab-df-container\">\n",
+              "      <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>created_at</th>\n",
+              "      <th>user_id</th>\n",
+              "      <th>name</th>\n",
+              "      <th>label</th>\n",
+              "      <th>tweet</th>\n",
+              "      <th>language</th>\n",
+              "      <th>link</th>\n",
+              "      <th>Column1</th>\n",
+              "      <th>length</th>\n",
+              "      <th>tokenized</th>\n",
+              "      <th>encode</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>2022-10-28 23:15:24 UTC</td>\n",
+              "      <td>4.386524e+08</td>\n",
+              "      <td>AfricanSon®</td>\n",
+              "      <td>negative</td>\n",
+              "      <td>Ethiopian Airlines (EA) flight ET-3717 was int...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/samsenge/status/1586134568...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>31</td>\n",
+              "      <td>ethiopian airlines ea flight et3717 was interc...</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>2022-10-28 22:53:28 UTC</td>\n",
+              "      <td>1.320000e+18</td>\n",
+              "      <td>Bargo YOUSIF</td>\n",
+              "      <td>negative</td>\n",
+              "      <td>_ details: It's #Ethiopian_Airlines flight, sm...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/BargoYousif/status/1586129...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>31</td>\n",
+              "      <td>details it is ethiopian airlines flight smoke ...</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>2022-10-28 22:21:31 UTC</td>\n",
+              "      <td>8.226798e+08</td>\n",
+              "      <td>Dr. Aklog Birara</td>\n",
+              "      <td>positive</td>\n",
+              "      <td>I look forward to seeing integrated infrastruc...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/DrAklogBirara/status/15861...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>33</td>\n",
+              "      <td>i look forward to seeing integrated infrastruc...</td>\n",
+              "      <td>2</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>2022-10-28 19:46:19 UTC</td>\n",
+              "      <td>1.470000e+18</td>\n",
+              "      <td>bill</td>\n",
+              "      <td>negative</td>\n",
+              "      <td>@jaeyoonieee me getting on ethiopian airlines ...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/ysfkd_/status/158608195096...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>12</td>\n",
+              "      <td>jaeyoonie me getting on ethiopian airlines and...</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>2022-10-28 16:40:48 UTC</td>\n",
+              "      <td>1.570000e+18</td>\n",
+              "      <td>OverMeon</td>\n",
+              "      <td>neutral</td>\n",
+              "      <td>#ETH552 ET-AVE A350 941 Ethiopian Airlines ADD...</td>\n",
+              "      <td>en</td>\n",
+              "      <td>https://twitter.com/OverMeon/status/1586035262...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>36</td>\n",
+              "      <td>eth552 etavenuea350 941 ethiopian airlines adu...</td>\n",
+              "      <td>1</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "      <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-4c2be413-514c-4fe5-8a9c-2646497926f8')\"\n",
+              "              title=\"Convert this dataframe to an interactive table.\"\n",
+              "              style=\"display:none;\">\n",
+              "        \n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M0 0h24v24H0V0z\" fill=\"none\"/>\n",
+              "    <path d=\"M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z\"/><path d=\"M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z\"/>\n",
+              "  </svg>\n",
+              "      </button>\n",
+              "      \n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      flex-wrap:wrap;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "      <script>\n",
+              "        const buttonEl =\n",
+              "          document.querySelector('#df-4c2be413-514c-4fe5-8a9c-2646497926f8 button.colab-df-convert');\n",
+              "        buttonEl.style.display =\n",
+              "          google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "        async function convertToInteractive(key) {\n",
+              "          const element = document.querySelector('#df-4c2be413-514c-4fe5-8a9c-2646497926f8');\n",
+              "          const dataTable =\n",
+              "            await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                     [key], {});\n",
+              "          if (!dataTable) return;\n",
+              "\n",
+              "          const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "            '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "            + ' to learn more about interactive tables.';\n",
+              "          element.innerHTML = '';\n",
+              "          dataTable['output_type'] = 'display_data';\n",
+              "          await google.colab.output.renderOutput(dataTable, element);\n",
+              "          const docLink = document.createElement('div');\n",
+              "          docLink.innerHTML = docLinkHtml;\n",
+              "          element.appendChild(docLink);\n",
+              "        }\n",
+              "      </script>\n",
+              "    </div>\n",
+              "  </div>\n",
+              "  "
+            ]
+          },
+          "metadata": {},
+          "execution_count": 13
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df['label'].value_counts()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "98MsV0vhOqh0",
+        "outputId": "4a71897f-b19d-45f3-c1f5-b59c4d2f230e"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "neutral     2274\n",
+              "positive    1119\n",
+              "negative    1036\n",
+              "Name: label, dtype: int64"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 14
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "corpus= list(df['tokenized'])"
+      ],
+      "metadata": {
+        "id": "GFKPawQzQL0F"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+        "\n",
+        "tf= TfidfVectorizer(max_features=10000, ngram_range=(2,2))\n",
+        "\n",
+        "X=tf.fit_transform(corpus)"
+      ],
+      "metadata": {
+        "id": "nc_p2uJnPG0f"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "y= df['encode'].tolist()"
+      ],
+      "metadata": {
+        "id": "ACXplJIWQl04"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from imblearn.over_sampling import SMOTE\n",
+        "over= SMOTE()\n",
+        "\n",
+        "X,y = over.fit_resample(X,y)"
+      ],
+      "metadata": {
+        "id": "nLU9UjOSQYwL"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "len(y)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "nxBinnXSQ0g5",
+        "outputId": "44593e5e-8d70-4943-ab79-67839f9636fe"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "6822"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 42
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.model_selection import train_test_split\n",
+        "\n",
+        "X_train, X_text, y_train, y_test= train_test_split(X, y, test_size=0.2, stratify= y)"
+      ],
+      "metadata": {
+        "id": "pRiOtSbrQ7F4"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "len(y_train)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "TkiwJmXkRWbl",
+        "outputId": "d8acb47b-5b7f-49af-c0f1-1134ad635f82"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "5457"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 44
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "X_train = X_train.toarray()"
+      ],
+      "metadata": {
+        "id": "OjJGWb03SBQT"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "X_text= X_text.toarray()"
+      ],
+      "metadata": {
+        "id": "lgFzk8yBSgbT"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.naive_bayes import GaussianNB\n",
+        "gnb = GaussianNB()\n",
+        "gnb.fit(X_train, y_train)\n",
+        "\n",
+        "pred= gnb.predict(X_text)\n",
+        "\n",
+        "from sklearn.metrics import classification_report,confusion_matrix,accuracy_score\n",
+        "\n",
+        "matrix=confusion_matrix(y_test,pred)\n",
+        "print(matrix)\n",
+        "score=accuracy_score(y_test,pred)\n",
+        "print(score)\n",
+        "report=classification_report(y_test,pred)\n",
+        "print(report)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "FZ6vZaC7RbRM",
+        "outputId": "23f22c1b-7256-409c-f91c-aa385b57798c"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[[434   8  13]\n",
+            " [ 40 324  91]\n",
+            " [ 20  32 403]]\n",
+            "0.8505494505494505\n",
+            "              precision    recall  f1-score   support\n",
+            "\n",
+            "           0       0.88      0.95      0.91       455\n",
+            "           1       0.89      0.71      0.79       455\n",
+            "           2       0.79      0.89      0.84       455\n",
+            "\n",
+            "    accuracy                           0.85      1365\n",
+            "   macro avg       0.85      0.85      0.85      1365\n",
+            "weighted avg       0.85      0.85      0.85      1365\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.linear_model import LogisticRegression\n",
+        "\n",
+        "lr= LogisticRegression()\n",
+        "\n",
+        "lr.fit(X_train, y_train)\n",
+        "\n",
+        "predi= lr.predict(X_text)\n",
+        "\n",
+        "from sklearn.metrics import classification_report,confusion_matrix,accuracy_score\n",
+        "\n",
+        "matrix=confusion_matrix(y_test,predi)\n",
+        "print(matrix)\n",
+        "score=accuracy_score(y_test,predi)\n",
+        "print(score)\n",
+        "report=classification_report(y_test,predi)\n",
+        "print(report)\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "nQhErmbHR2TS",
+        "outputId": "df4ba11a-eac4-425e-a07e-d487f8eac113"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[[403  16  36]\n",
+            " [ 28 349  78]\n",
+            " [ 15  40 400]]\n",
+            "0.843956043956044\n",
+            "              precision    recall  f1-score   support\n",
+            "\n",
+            "           0       0.90      0.89      0.89       455\n",
+            "           1       0.86      0.77      0.81       455\n",
+            "           2       0.78      0.88      0.83       455\n",
+            "\n",
+            "    accuracy                           0.84      1365\n",
+            "   macro avg       0.85      0.84      0.84      1365\n",
+            "weighted avg       0.85      0.84      0.84      1365\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.ensemble import RandomForestClassifier\n",
+        "randomclassifier=RandomForestClassifier(n_estimators=200, criterion='entropy')\n",
+        "randomclassifier.fit(X_train,y_train)\n",
+        "\n",
+        "pred= randomclassifier.predict(X_text)\n",
+        "\n",
+        "from sklearn.metrics import classification_report,confusion_matrix,accuracy_score\n",
+        "\n",
+        "matrix=confusion_matrix(y_test,pred)\n",
+        "print(matrix)\n",
+        "score=accuracy_score(y_test,pred)\n",
+        "print(score)\n",
+        "report=classification_report(y_test,pred)\n",
+        "print(report)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "5VlcXG_0Ssvz",
+        "outputId": "132d68b9-7a93-4b24-ae76-3b9dea2283c4"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[[369  36  50]\n",
+            " [ 16 381  58]\n",
+            " [  6  71 378]]\n",
+            "0.8263736263736263\n",
+            "              precision    recall  f1-score   support\n",
+            "\n",
+            "           0       0.94      0.81      0.87       455\n",
+            "           1       0.78      0.84      0.81       455\n",
+            "           2       0.78      0.83      0.80       455\n",
+            "\n",
+            "    accuracy                           0.83      1365\n",
+            "   macro avg       0.83      0.83      0.83      1365\n",
+            "weighted avg       0.83      0.83      0.83      1365\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.svm import SVC # \"Support vector classifier\"  \n",
+        "classifier = SVC(kernel='linear', random_state=0)  \n",
+        "classifier.fit(X_train, y_train)  \n",
+        "\n",
+        "pred= classifier.predict(X_text)\n",
+        "\n",
+        "from sklearn.metrics import classification_report,confusion_matrix,accuracy_score\n",
+        "\n",
+        "matrix=confusion_matrix(y_test,pred)\n",
+        "print(matrix)\n",
+        "score=accuracy_score(y_test,pred)\n",
+        "print(score)\n",
+        "report=classification_report(y_test,pred)\n",
+        "print(report)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "o2cleuWzU4Is",
+        "outputId": "cfecb8e3-cbcb-42b6-82a2-99e15e802839"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[[405   9  41]\n",
+            " [ 28 350  77]\n",
+            " [ 17  37 401]]\n",
+            "0.8468864468864469\n",
+            "              precision    recall  f1-score   support\n",
+            "\n",
+            "           0       0.90      0.89      0.90       455\n",
+            "           1       0.88      0.77      0.82       455\n",
+            "           2       0.77      0.88      0.82       455\n",
+            "\n",
+            "    accuracy                           0.85      1365\n",
+            "   macro avg       0.85      0.85      0.85      1365\n",
+            "weighted avg       0.85      0.85      0.85      1365\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "Xq2kQlgzVBSC"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
