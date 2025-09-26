@@ -1,0 +1,35 @@
+from flask import Flask, render_template, request, url_for
+from transformers import BertTokenizer
+import torch 
+import pickle
+from colorama import Fore, Back, Style
+
+tok= BertTokenizer.from_pretrained('bert-base-uncased')
+
+app= Flask(__name__)
+model = pickle.load(open("model1.pkl", "rb"))
+
+@app.route('/')
+def home():
+    return render_template('index_ethiopian_airlines.html')
+
+@app.route('/predicting', methods= ['POST','GET'])
+def predicting():
+    if request.method == 'POST':
+        input_text = request.form['ethiopia']
+        inputs = tok(input_text,padding = True, truncation = True, return_tensors='pt')
+    outputs = model(**inputs)
+    predictions = torch.nn.functional.softmax(outputs.logits, dim=-1)
+    predictions = predictions.cpu().detach().numpy()
+    if predictions[0][0] == max(predictions[0]):
+                           output= 'negative'
+    if predictions[0][1] == max(predictions[0]):
+                           output= 'neutral'
+    if predictions[0][2] ==max(predictions[0]):
+                           output='positive'  
+    #prediction = model.predict(input_tex)
+    
+    return render_template('index_ethiopian_airlines.html', prediction='The text predicted as :{}'.format(output))
+
+if __name__ == '__main__':
+    app.run(debug=True)
